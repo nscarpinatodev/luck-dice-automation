@@ -1,0 +1,40 @@
+{
+  "id": "luck-dice-automation",
+  "title": "Luck Dice Automation",
+  "description": "Automates Luck Dice prompts for attacks, damage, and failed checks/saves with Midi-QoL.",
+  "version": "1.0.1",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
+  "authors": [
+    {
+      "name": "Luck Dice Automation"
+    }
+  ],
+  "scripts": [
+    "scripts/luck-dice-automation.js"
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "5.2.5"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "id": "midi-qol",
+        "type": "module"
+      }
+    ]
+  },
+  "url": "https://github.com/nscarpinatodev/luck-dice-automation",
+  "manifest": "https://github.com/nscarpinatodev/luck-dice-automation/releases/latest/download/module.json",
+  "download": "https://github.com/nscarpinatodev/luck-dice-automation/releases/download/v1.0.1/luck-dice-automation-v1.0.1.zip",
+  "readme": "https://github.com/nscarpinatodev/luck-dice-automation#readme",
+  "license": "https://github.com/nscarpinatodev/luck-dice-automation/blob/main/LICENSE"
+}

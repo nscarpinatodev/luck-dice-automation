@@ -13,8 +13,12 @@
     }
   ],
   "scripts": [
-    "scripts/luck-dice-automation.js"
+    "scripts/core.js",
+    "scripts/attack.js",
+    "scripts/skill-check.js",
+    "scripts/saving-throw.js"
   ],
+  "socket": true,
   "relationships": {
     "systems": [
       {

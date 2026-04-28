@@ -2,6 +2,8 @@
 // Shared constants, dice helpers, dialog utilities, and settings registration.
 // Loaded first; attack.js and skill-check.js depend on everything defined here.
 
+window.LDA = (() => {
+
 const MODULE_ID = "luck-dice-automation";
 const LUCK_DICE_ITEM_NAME  = "Luck Dice";
 const IMPACT_DICE_ITEM_NAME = "Impact Dice";
@@ -423,3 +425,19 @@ Hooks.once("init", () => {
 
   console.log(`[${MODULE_ID}] Settings registered.`);
 });
+
+return {
+  MODULE_ID, LUCK_DICE_ITEM_NAME, IMPACT_DICE_ITEM_NAME,
+  workflowState, pendingMidiSaveResults, clamp, debug,
+  getWorkflowKey, getState,
+  getDiceItem, getDiceUses, updateDiceUses,
+  getLuckItem, getLuckUses, updateLuckUses,
+  actorHasLuckDice, isWorkflowResponder,
+  promptChoice, promptSlider,
+  buildFakeRoll, getKeptD20Result,
+  spendDiceFromPools, evaluateReroll, buildDiceAvailableHTML,
+  whisperLuckRegain, maybeRegainLuckDie,
+  isLuckDiceEnabled, isInspirationEnabled,
+  actorHasInspiration, consumeInspiration, evaluateInspirationReroll,
+};
+})();

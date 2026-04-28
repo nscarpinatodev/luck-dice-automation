@@ -2,6 +2,19 @@
 // All attack-roll manipulation, chat-card history rendering, and Midi-QoL hooks.
 // Depends on: core.js (must be loaded first).
 
+(() => {
+const LDA = window.LDA;
+const {
+  MODULE_ID, LUCK_DICE_ITEM_NAME, IMPACT_DICE_ITEM_NAME,
+  workflowState, pendingMidiSaveResults, clamp, debug,
+  getWorkflowKey, getState, getDiceItem, getDiceUses, updateDiceUses,
+  updateLuckUses, actorHasLuckDice, isWorkflowResponder,
+  promptChoice, promptSlider, buildFakeRoll, getKeptD20Result, spendDiceFromPools,
+  evaluateReroll, buildDiceAvailableHTML, whisperLuckRegain, maybeRegainLuckDie,
+  isLuckDiceEnabled, isInspirationEnabled, actorHasInspiration, consumeInspiration,
+  evaluateInspirationReroll,
+} = LDA;
+
 // ── Hit state detection ───────────────────────────────────────────────────────
 
 // getKeptD20Result is defined in core.js and shared across all roll types.
@@ -646,13 +659,16 @@ function updateMidiHitIndicators(container) {
 /**
  * Show the luck dice / inspiration prompt on the current client and return the
  * result. Called directly when this client owns the actor.
+ *
+ * Cross-file calls to promptNatOneSave (saving-throw.js) and promptLuckOnCheckFail
+ * (skill-check.js) go through LDA because those scripts load after attack.js.
  */
 async function runMidiSavePrompt(actor, rollTotal, dc, formula, d20Result, rollMsgId, rollMsgContent) {
   const fakeRoll = buildFakeRoll(rollTotal, formula, d20Result);
   if (d20Result === 1) {
-    return promptNatOneSave(actor, rollTotal, dc, fakeRoll, rollMsgId, rollMsgContent);
+    return LDA.promptNatOneSave(actor, rollTotal, dc, fakeRoll, rollMsgId, rollMsgContent);
   }
-  return promptLuckOnCheckFail(
+  return LDA.promptLuckOnCheckFail(
     actor, rollTotal, dc, rollMsgId, rollMsgContent, fakeRoll,
     "Failed Saving Throw", "saving throw"
   );
@@ -1231,3 +1247,6 @@ Hooks.once("ready", () => {
 
   console.log(`[${MODULE_ID}] attack.js initialized.`);
 });
+
+Object.assign(LDA, { runMidiSavePrompt });
+})();

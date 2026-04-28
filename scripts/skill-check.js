@@ -3,6 +3,19 @@
 // failed skill / ability checks.
 // Depends on: core.js (must be loaded first).
 
+(() => {
+const LDA = window.LDA;
+const {
+  MODULE_ID, LUCK_DICE_ITEM_NAME, IMPACT_DICE_ITEM_NAME,
+  workflowState, clamp, debug,
+  getDiceUses, updateLuckUses, actorHasLuckDice,
+  promptChoice, promptSlider, getKeptD20Result, spendDiceFromPools,
+  evaluateReroll, buildDiceAvailableHTML, whisperLuckRegain,
+  isLuckDiceEnabled, isInspirationEnabled, actorHasInspiration, consumeInspiration,
+  evaluateInspirationReroll,
+  runMidiSavePrompt,  // exported by attack.js, which loads before us
+} = LDA;
+
 // ── Label helpers ─────────────────────────────────────────────────────────────
 
 /**
@@ -382,7 +395,8 @@ async function rollSkillForCheck(actor, checkValue, dc, showDC = false, gmCardId
     let result;
     if (isSave && isNatOne) {
       // Saves get a restricted nat-1 dialog (reroll or gain luck die — no add-dice).
-      result = await promptNatOneSave(actor, total, dc, roll, rollMsgId, rollMsgContent);
+      // promptNatOneSave is in saving-throw.js which loads after us — use LDA for late binding.
+      result = await LDA.promptNatOneSave(actor, total, dc, roll, rollMsgId, rollMsgContent);
     } else {
       result = await promptLuckOnCheckFail(
         actor, total, dc, rollMsgId, rollMsgContent, roll,
@@ -685,3 +699,6 @@ Hooks.once("ready", () => {
     }
   });
 });
+
+Object.assign(LDA, { promptLuckOnCheckFail });
+})();

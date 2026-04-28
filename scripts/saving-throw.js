@@ -2,6 +2,18 @@
 // Nat-1 prompt for manual saving throws triggered via the skill check launcher.
 // Depends on: core.js and skill-check.js (must be loaded first).
 
+(() => {
+const LDA = window.LDA;
+const {
+  MODULE_ID, LUCK_DICE_ITEM_NAME, IMPACT_DICE_ITEM_NAME,
+  debug, getDiceUses, updateLuckUses, actorHasLuckDice,
+  promptChoice, getKeptD20Result, spendDiceFromPools,
+  evaluateReroll, buildDiceAvailableHTML, whisperLuckRegain,
+  isLuckDiceEnabled, isInspirationEnabled, actorHasInspiration, consumeInspiration,
+  evaluateInspirationReroll,
+  promptLuckOnCheckFail,  // exported by skill-check.js, which loads before us
+} = LDA;
+
 console.log(`[${MODULE_ID}] saving-throw.js parsed — user=${game?.user?.name ?? "unknown"} isGM=${game?.user?.isGM ?? "?"} build=${Date.now()}`);
 
 // ── Nat-1 on saving throw ─────────────────────────────────────────────────────
@@ -105,3 +117,6 @@ async function promptNatOneSave(actor, rollTotal, dc, originalRoll, rollMsgId, r
 
   return null;
 }
+
+Object.assign(LDA, { promptNatOneSave });
+})();

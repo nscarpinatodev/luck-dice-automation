@@ -1,0 +1,7 @@
+# Foundry VTT LevelDB compendium pack files are binary.
+# Without this, autocrlf/EOL normalization corrupts the database
+# (e.g. CURRENT and MANIFEST get \n -> \r\n and the pack fails to load).
+packs/**/*.ldb      binary
+packs/**/*.log      binary
+packs/**/CURRENT    binary
+packs/**/MANIFEST-* binary

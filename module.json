@@ -2,7 +2,7 @@
   "id": "scorpious187s-luck-dice-automation",
   "title": "Scorpious187's Luck Dice Automation",
   "description": "Automates Luck Dice prompts for attacks, damage, and failed checks/saves with Midi-QoL.",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "compatibility": {
     "minimum": "13",
     "verified": "14.364"
@@ -19,6 +19,19 @@
     "scripts/saving-throw.js"
   ],
   "socket": true,
+  "packs": [
+    {
+      "name": "luck-dice-items",
+      "label": "Luck Dice Items",
+      "path": "packs/luck-dice-items",
+      "type": "Item",
+      "system": "dnd5e",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    }
+  ],
   "relationships": {
     "systems": [
       {
@@ -38,7 +51,7 @@
   },
   "url": "https://github.com/nscarpinatodev/scorpious187s-luck-dice-automation",
   "manifest": "https://github.com/nscarpinatodev/scorpious187s-luck-dice-automation/releases/latest/download/module.json",
-  "download": "https://github.com/nscarpinatodev/scorpious187s-luck-dice-automation/releases/download/1.0.3/scorpious187s-luck-dice-automation.zip",
+  "download": "https://github.com/nscarpinatodev/scorpious187s-luck-dice-automation/releases/download/1.1.0/scorpious187s-luck-dice-automation.zip",
   "readme": "https://github.com/nscarpinatodev/scorpious187s-luck-dice-automation#readme",
   "license": "https://github.com/nscarpinatodev/scorpious187s-luck-dice-automation/blob/main/LICENSE"
 }

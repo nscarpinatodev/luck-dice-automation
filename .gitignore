@@ -1,3 +1,8 @@
 # Build artifacts
 /dist/
 *.zip
+
+# Foundry LevelDB pack runtime files (regenerated on open; not part of the data)
+packs/*/LOCK
+packs/*/LOG
+packs/*/LOG.old

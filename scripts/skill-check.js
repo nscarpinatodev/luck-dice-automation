@@ -338,26 +338,39 @@ async function rollSkillForCheck(actor, checkValue, dc, showDC = false, gmCardId
   // Snapshot existing message IDs so we can identify the card the roll creates.
   const knownMsgIds = new Set(game.messages.map(m => m.id));
 
-  // Build roll options from the launcher's advantage/disadvantage selection.
-  const rollOptions = advantageMode === "advantage"    ? { advantage: true }
-                    : advantageMode === "disadvantage" ? { disadvantage: true }
-                    : {};
+  // Build the modern dnd5e (5.x) roll process config from the launcher's
+  // advantage selection. The current roll API takes a config OBJECT first
+  // ({skill}/{ability}) — NOT the legacy (id, options) form — and the roll
+  // configuration dialog is controlled by the SECOND `dialog` argument.
+  // We pass `configure: true` to force the dialog to appear: the legacy
+  // (id, options) call path fast-forwarded it, so players never saw it.
+  const rollConfig = type === "skill" ? { skill: key } : { ability: key };
+  if (advantageMode === "advantage")    rollConfig.advantage = true;
+  if (advantageMode === "disadvantage") rollConfig.disadvantage = true;
+  const dialogConfig = { configure: true };
 
-  let roll = null;
+  // Legacy (pre-5.x) options, only used if a modern method is unavailable.
+  const legacyOpts = advantageMode === "advantage"    ? { advantage: true }
+                   : advantageMode === "disadvantage" ? { disadvantage: true }
+                   : {};
+
+  let rollResult = null;
   try {
     if (type === "skill") {
-      roll = await actor.rollSkill(key, rollOptions);
+      rollResult = await actor.rollSkill(rollConfig, dialogConfig);
     } else if (type === "ability") {
-      // dnd5e 5.x uses rollAbilityTest; older builds may use rollAbilityCheck.
-      const fn = typeof actor.rollAbilityTest === "function" ? "rollAbilityTest" : "rollAbilityCheck";
-      roll = await actor[fn](key, rollOptions);
+      // Prefer modern rollAbilityCheck; fall back to deprecated rollAbilityTest.
+      if (typeof actor.rollAbilityCheck === "function") {
+        rollResult = await actor.rollAbilityCheck(rollConfig, dialogConfig);
+      } else {
+        rollResult = await actor.rollAbilityTest(key, legacyOpts);
+      }
     } else if (type === "save") {
-      // dnd5e 5.x removed rollAbilitySave; try the most likely alternatives in order.
-      const saveFn = typeof actor.rollAbilitySave  === "function" ? "rollAbilitySave"
-                   : typeof actor.rollSavingThrow   === "function" ? "rollSavingThrow"
-                   : null;
-      if (saveFn) {
-        roll = await actor[saveFn](key, rollOptions);
+      // Prefer modern rollSavingThrow; fall back to deprecated rollAbilitySave.
+      if (typeof actor.rollSavingThrow === "function") {
+        rollResult = await actor.rollSavingThrow(rollConfig, dialogConfig);
+      } else if (typeof actor.rollAbilitySave === "function") {
+        rollResult = await actor.rollAbilitySave(key, legacyOpts);
       } else {
         const available = Object.getOwnPropertyNames(Object.getPrototypeOf(actor))
           .filter(n => /^roll/i.test(n));
@@ -371,6 +384,9 @@ async function rollSkillForCheck(actor, checkValue, dc, showDC = false, gmCardId
     return;
   }
 
+  // Modern dnd5e roll methods return an array of rolls (D20Roll[]); legacy
+  // methods return a single roll. Normalise to the first/only D20Roll.
+  const roll = Array.isArray(rollResult) ? rollResult[0] : rollResult;
   if (!roll) {
     debug(`rollSkillForCheck: roll cancelled for ${actor.name}`);
     return;

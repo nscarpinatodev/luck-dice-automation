@@ -1,0 +1,66 @@
+name: Release
+
+# Publish a Foundry-installable release whenever a version tag is pushed:
+#   git tag v1.2.0 && git push origin v1.2.0
+#
+# The tag is the single source of truth: module.json's version and URLs are
+# stamped from it at build time, so a release can never disagree with its tag.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Derive version and URLs from the tag
+        id: meta
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+          echo "manifest=https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/module.json" >> "$GITHUB_OUTPUT"
+          echo "download=https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/module.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp module.json
+        run: |
+          tmp="$(mktemp)"
+          jq --arg v "${{ steps.meta.outputs.version }}" \
+             --arg m "${{ steps.meta.outputs.manifest }}" \
+             --arg d "${{ steps.meta.outputs.download }}" \
+             '.version = $v | .manifest = $m | .download = $d' module.json > "$tmp"
+          mv "$tmp" module.json
+          echo "----- module.json -----"; cat module.json
+
+      - name: Verify the tag matches nothing stale
+        run: |
+          v="$(jq -r '.version' module.json)"
+          [ "$v" = "${{ steps.meta.outputs.version }}" ] || { echo "version mismatch: $v"; exit 1; }
+
+      - name: Build module.zip
+        run: |
+          # Package module.json plus whichever standard asset paths this module
+          # actually has. Build inputs (src, tools, docs, node_modules) stay out.
+          files="module.json"
+          for p in scripts styles templates lang packs assets macros frames sounds images fonts media README.md LICENSE CHANGELOG.md; do
+            [ -e "$p" ] && files="$files $p"
+          done
+          echo "packaging: $files"
+          zip -r module.zip $files
+          unzip -Z1 module.zip
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          files: |
+            module.json
+            module.zip
+          generate_release_notes: true

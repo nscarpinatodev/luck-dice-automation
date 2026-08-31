@@ -46,6 +46,14 @@
       {
         "id": "midi-qol",
         "type": "module"
+      },
+      {
+        "id": "scorpious187s-lib",
+        "type": "module",
+        "manifest": "https://github.com/nscarpinatodev/scorpious187s-lib/releases/latest/download/module.json",
+        "compatibility": {
+          "minimum": "0.3.0"
+        }
       }
     ]
   },

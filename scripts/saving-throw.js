@@ -30,7 +30,7 @@ console.log(`[${MODULE_ID}] saving-throw.js parsed — user=${game?.user?.name ?
  *
  * Returns { finalTotal, passed } or null (cancelled / could not spend).
  */
-async function promptNatOneSave(actor, rollTotal, dc, originalRoll, rollMsgId, rollMsgContent) {
+async function promptNatOneSave(actor, rollTotal, dc, originalRoll, rollMsgId, rollMsgContent, showDC = true) {
   if (!game.user.isGM && actor.hasPlayerOwner && !actor.isOwner) return null;
 
   const luckEnabled = isLuckDiceEnabled();
@@ -111,7 +111,7 @@ async function promptNatOneSave(actor, rollTotal, dc, originalRoll, rollMsgId, r
     // Still failing — hand off to the full luck-dice loop (add-dice now available).
     return await promptLuckOnCheckFail(
       actor, newTotal, dc, newMsgId, newContent, newRoll,
-      "Failed Saving Throw", "saving throw"
+      "Failed Saving Throw", "saving throw", showDC
     );
   }
 

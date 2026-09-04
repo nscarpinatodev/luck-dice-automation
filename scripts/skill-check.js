@@ -349,26 +349,37 @@ async function rollSkillForCheck(actor, checkValue, dc, showDC = false, gmCardId
   if (advantageMode === "disadvantage") rollConfig.disadvantage = true;
   const dialogConfig = { configure: true };
 
+  // Force the requested roll onto a PUBLIC roll mode. When the GM's client is
+  // the one that makes the roll — rolling on behalf of a player who isn't an
+  // active OWNER, or with mirror-to-GM enabled — the roll card would otherwise
+  // inherit the GM's ambient chat roll-mode ("Private GM Roll" / "Blind"),
+  // so the card never reaches the players. Passing rollMode explicitly makes
+  // the card public regardless of the GM's dropdown; hideCheckCardsFromGM
+  // still re-whispers the card to the owning player(s) afterward.
+  const PUBLIC_ROLL_MODE = CONST?.DICE_ROLL_MODES?.PUBLIC ?? "publicroll";
+  const messageConfig = { rollMode: PUBLIC_ROLL_MODE };
+
   // Legacy (pre-5.x) options, only used if a modern method is unavailable.
   const legacyOpts = advantageMode === "advantage"    ? { advantage: true }
                    : advantageMode === "disadvantage" ? { disadvantage: true }
                    : {};
+  legacyOpts.rollMode = PUBLIC_ROLL_MODE;
 
   let rollResult = null;
   try {
     if (type === "skill") {
-      rollResult = await actor.rollSkill(rollConfig, dialogConfig);
+      rollResult = await actor.rollSkill(rollConfig, dialogConfig, messageConfig);
     } else if (type === "ability") {
       // Prefer modern rollAbilityCheck; fall back to deprecated rollAbilityTest.
       if (typeof actor.rollAbilityCheck === "function") {
-        rollResult = await actor.rollAbilityCheck(rollConfig, dialogConfig);
+        rollResult = await actor.rollAbilityCheck(rollConfig, dialogConfig, messageConfig);
       } else {
         rollResult = await actor.rollAbilityTest(key, legacyOpts);
       }
     } else if (type === "save") {
       // Prefer modern rollSavingThrow; fall back to deprecated rollAbilitySave.
       if (typeof actor.rollSavingThrow === "function") {
-        rollResult = await actor.rollSavingThrow(rollConfig, dialogConfig);
+        rollResult = await actor.rollSavingThrow(rollConfig, dialogConfig, messageConfig);
       } else if (typeof actor.rollAbilitySave === "function") {
         rollResult = await actor.rollAbilitySave(key, legacyOpts);
       } else {
@@ -412,12 +423,13 @@ async function rollSkillForCheck(actor, checkValue, dc, showDC = false, gmCardId
     if (isSave && isNatOne) {
       // Saves get a restricted nat-1 dialog (reroll or gain luck die — no add-dice).
       // promptNatOneSave is in saving-throw.js which loads after us — use LDA for late binding.
-      result = await LDA.promptNatOneSave(actor, total, dc, roll, rollMsgId, rollMsgContent);
+      result = await LDA.promptNatOneSave(actor, total, dc, roll, rollMsgId, rollMsgContent, showDC);
     } else {
       result = await promptLuckOnCheckFail(
         actor, total, dc, rollMsgId, rollMsgContent, roll,
         isSave ? "Failed Saving Throw" : "Failed Skill Check",
-        isSave ? "saving throw"         : "skill check"
+        isSave ? "saving throw"         : "skill check",
+        showDC
       );
     }
     if (result) await reportCheckResult(actor, result.finalTotal, result.passed, gmCardId, rollMsgId);
@@ -426,7 +438,7 @@ async function rollSkillForCheck(actor, checkValue, dc, showDC = false, gmCardId
 
 // ── Luck dice prompt for failed checks ───────────────────────────────────────
 
-async function promptLuckOnCheckFail(actor, rollTotal, dc, rollMsgId = null, rollMsgContent = "", originalRoll = null, dialogTitle = "Failed Skill Check", rollType = "skill check") {
+async function promptLuckOnCheckFail(actor, rollTotal, dc, rollMsgId = null, rollMsgContent = "", originalRoll = null, dialogTitle = "Failed Skill Check", rollType = "skill check", showDC = true) {
   // Permission guard: only the actor's owner (or GM) may see the dialog.
   if (!game.user.isGM && actor.hasPlayerOwner && !actor.isOwner) return;
 
@@ -499,7 +511,7 @@ async function promptLuckOnCheckFail(actor, rollTotal, dc, rollMsgId = null, rol
 
     const action = await promptChoice(
       dialogTitle,
-      `<p><strong>${actor.name}</strong> rolled <strong>${currentTotal}</strong> vs DC <strong>${dc}</strong>.</p>
+      `<p><strong>${actor.name}</strong> rolled <strong>${currentTotal}</strong>${showDC ? ` vs DC <strong>${dc}</strong>` : ""}.</p>
        <p>Spend dice to improve the roll, or keep the failure?</p>
        ${luckEnabled ? buildDiceAvailableHTML(actor) : ""}`,
       options
@@ -595,7 +607,7 @@ async function promptLuckOnCheckFail(actor, rollTotal, dc, rollMsgId = null, rol
       allBonusRolls.push(bonusRoll);
       currentTotal += bonusRoll.total;
 
-      bonusMsgId = await postCheckBonus(actor, baseTotal, allBonusRolls, currentTotal, dc, bonusMsgId, currentBaseMsgContent, rollType);
+      bonusMsgId = await postCheckBonus(actor, baseTotal, allBonusRolls, currentTotal, dc, bonusMsgId, currentBaseMsgContent, rollType, showDC);
 
       if (currentTotal >= dc) return { finalTotal: currentTotal, passed: true }; // passed — loop exits
       // Still failing — loop back to offer more dice.
@@ -611,15 +623,18 @@ async function promptLuckOnCheckFail(actor, rollTotal, dc, rollMsgId = null, rol
  * and is prepended unchanged so the d20 result stays visible at the top.
  * Returns the chat message ID for the next iteration.
  */
-async function postCheckBonus(actor, originalTotal, allBonusRolls, newTotal, dc, existingMsgId = null, baseMsgContent = "", rollType = "skill check") {
+async function postCheckBonus(actor, originalTotal, allBonusRolls, newTotal, dc, existingMsgId = null, baseMsgContent = "", rollType = "skill check", showDC = true) {
   const passed = newTotal >= dc;
 
   // Render each bonus roll and stack them vertically.
   const rollsHtml = (await Promise.all(allBonusRolls.map(r => r.render()))).join("");
 
-  // Summary line: originalTotal + bonus1 + bonus2 + … = newTotal vs DC X
+  // Summary line: originalTotal + bonus1 + bonus2 + … = newTotal [vs DC X] — PASSED/FAILED.
+  // The "vs DC X" portion is omitted unless the GM ticked "Show DC to players",
+  // so players still see their dice and the verdict without learning the DC.
   const bonusParts  = allBonusRolls.map(r => `<strong>${r.total}</strong>`).join(" + ");
-  const summaryLine = `<strong style="font-size:1.15em">${originalTotal}</strong> + ${bonusParts} = <strong>${newTotal}</strong> vs DC ${dc} —
+  const dcText      = showDC ? ` vs DC ${dc}` : "";
+  const summaryLine = `<strong style="font-size:1.15em">${originalTotal}</strong> + ${bonusParts} = <strong>${newTotal}</strong>${dcText} —
     <strong style="color:${passed ? "#719f50" : "#c0392b"}">${passed ? "PASSED" : "FAILED"}</strong>`;
 
   const luckSection = `
